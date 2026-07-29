@@ -292,14 +292,24 @@ if __name__ == "__main__":
     alerts, new_state = check_crashes(state, matches, now)
 
     for alert in alerts:
-        message = (
-            f"🚨 *CRASH CALCIO*\n"
-            f"⚽ {alert['league']}\n"
-            f"⚔️ {alert['home']} vs {alert['away']}\n"
-            f"📉 Quota {alert['predicted']}: {alert['old_odd']:.2f} → {alert['new_odd']:.2f} (-{alert['drop']}%)\n"
-            f"⏱️ Rilevato alle {alert['time']}\n"
-            f"🔮 Pronostico: *{alert['predicted']}* vincitore"
-        )
+                if alert.get("alert_type") == "pre_alert":
+            message = (
+                f"⚠️ *MOVIMENTO SOSPETTO*\n"
+                f"⚽ {alert['league']}\n"
+                f"⚔️ {alert['home']} vs {alert['away']}\n"
+                f"📉 Quota {alert['predicted']}: {alert['old_odd']:.2f} → {alert['new_odd']:.2f} (-{alert['drop']}%)\n"
+                f"⏱️ Rilevato alle {alert['time']}\n"
+                f"🔮 Possibile crollo in corso"
+            )
+        else:
+            message = (
+                f"🚨 *CRASH CALCIO*\n"
+                f"⚽ {alert['league']}\n"
+                f"⚔️ {alert['home']} vs {alert['away']}\n"
+                f"📉 Quota {alert['predicted']}: {alert['old_odd']:.2f} → {alert['new_odd']:.2f} (-{alert['drop']}%)\n"
+                f"⏱️ Rilevato alle {alert['time']}\n"
+                f"🔮 Pronostico: *{alert['predicted']}* vincitore"
+            )
         send_telegram(message)
         bets = save_bet(bets, alert)
 
