@@ -10,11 +10,14 @@ API_KEY = os.environ["API_KEY"]
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-CRASH_THRESHOLD_PERCENT = 25
-MAX_MINUTES_CRASH_WINDOW = 30
-MIN_STARTING_ODD = 1.50
-MAX_CRASH_ODD = 1.50
-HOURS_BEFORE_KICKOFF = 2
+# Soglie
+PRE_CRASH_THRESHOLD_PERCENT = 12       # pre‑alert già al 12%
+FULL_CRASH_THRESHOLD_PERCENT = 25      # alert definitivo al 25%
+MAX_MINUTES_CRASH_WINDOW = 15          # confronto con 15 minuti fa (3 scansioni)
+MIN_STARTING_ODD = 1.80
+MAX_CRASH_ODD = 1.80
+QUOTA_MINIMA_DOPO_CRASH = 1.30         # ignora crolli che schiacciano sotto 1.30
+HOURS_BEFORE_KICKOFF = 2               # ignora partite che iniziano oltre 2 ore da adesso
 
 TARGET_SPORT_KEYS = [
     "soccer_argentina_primera_division",
