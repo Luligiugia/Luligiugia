@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Market Hunter Calcio – Final Edition (con debug orari)
+Market Hunter Calcio – Venerdì Edition
 """
 
 import os, json, logging, requests, sys
@@ -10,14 +10,13 @@ API_KEY = os.environ["API_KEY"]
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-# Soglie
-PRE_CRASH_THRESHOLD_PERCENT = 12       # pre‑alert già al 12%
-FULL_CRASH_THRESHOLD_PERCENT = 25      # alert definitivo al 25%
-MAX_MINUTES_CRASH_WINDOW = 15          # confronto con 15 minuti fa (3 scansioni)
+PRE_CRASH_THRESHOLD_PERCENT = 12
+FULL_CRASH_THRESHOLD_PERCENT = 25
+MAX_MINUTES_CRASH_WINDOW = 15
 MIN_STARTING_ODD = 1.80
 MAX_CRASH_ODD = 1.80
-QUOTA_MINIMA_DOPO_CRASH = 1.30         # ignora crolli che schiacciano sotto 1.30
-HOURS_BEFORE_KICKOFF = 2               # ignora partite che iniziano oltre 2 ore da adesso
+QUOTA_MINIMA_DOPO_CRASH = 1.30
+HOURS_BEFORE_KICKOFF = 2
 
 TARGET_SPORT_KEYS = [
     "soccer_argentina_primera_division",
@@ -31,7 +30,7 @@ TARGET_SPORT_KEYS = [
 
 def is_monitoring_window():
     now = datetime.utcnow()
-    if now.weekday() != 6:   # solo domenica
+    if now.weekday() != 6:
         return False
     if not (14 <= now.hour <= 21):
         return False
@@ -73,8 +72,6 @@ def fetch_odds():
             return []
         data = resp.json()
         matches = []
-        min_start = None
-        max_start = None
         for game in data:
             sport_key = game.get("sport_key")
             if sport_key not in TARGET_SPORT_KEYS:
@@ -82,16 +79,6 @@ def fetch_odds():
             home = game["home_team"]
             away = game["away_team"]
             commence_time = game.get("commence_time")
-
-            if commence_time:
-                try:
-                    kickoff = datetime.fromisoformat(commence_time.replace("Z", "+00:00"))
-                    if min_start is None or kickoff < min_start:
-                        min_start = kickoff
-                    if max_start is None or kickoff > max_start:
-                        max_start = kickoff
-                except:
-                    pass
 
             bookmakers = game.get("bookmakers", [])
             if not bookmakers:
@@ -116,16 +103,7 @@ def fetch_odds():
                 "commence_time": commence_time,
                 "odd_home": odd_home,
                 "odd_away": odd_away,
-                "bookmaker_used": bk["key"]
             })
-
-        if min_start and max_start:
-            logging.info(f"ORARI PARTITE: dalle {min_start.strftime('%H:%M')} alle {max_start.strftime('%H:%M')} UTC")
-        else:
-            logging.info("ORARI PARTITE: nessuna partita trovata")
-
-        bk_used = set(m["bookmaker_used"] for m in matches)
-        logging.info(f"Bookmaker utilizzati oggi: {bk_used}")
         return matches
     except Exception as e:
         logging.error(f"API call failed: {e}")
@@ -169,12 +147,11 @@ def check_crashes(state, current_matches, now):
         old_home = prev["odd_home"]
         old_away = prev["odd_away"]
 
-               # --- HOME ---
+        # Lato Home
         if old_home > MIN_STARTING_ODD and m["odd_home"] < MAX_CRASH_ODD:
             drop = (old_home - m["odd_home"]) / old_home
             if drop >= PRE_CRASH_THRESHOLD_PERCENT / 100.0:
                 if drop >= FULL_CRASH_THRESHOLD_PERCENT / 100.0:
-                    # Alert definitivo solo se la quota è ancora > QUOTA_MINIMA_DOPO_CRASH
                     if m["odd_home"] >= QUOTA_MINIMA_DOPO_CRASH:
                         alerts.append({
                             "fixture_id": fid,
@@ -190,7 +167,6 @@ def check_crashes(state, current_matches, now):
                             "alert_type": "definitive"
                         })
                 else:
-                    # Pre‑alert
                     alerts.append({
                         "fixture_id": fid,
                         "home": m["home"],
@@ -205,7 +181,7 @@ def check_crashes(state, current_matches, now):
                         "alert_type": "pre_alert"
                     })
 
-        # --- AWAY ---
+        # Lato Away
         if old_away > MIN_STARTING_ODD and m["odd_away"] < MAX_CRASH_ODD:
             drop = (old_away - m["odd_away"]) / old_away
             if drop >= PRE_CRASH_THRESHOLD_PERCENT / 100.0:
@@ -238,22 +214,6 @@ def check_crashes(state, current_matches, now):
                         "time": now.strftime("%H:%M:%S"),
                         "alert_type": "pre_alert"
                     })
-
-        if old_away > MIN_STARTING_ODD and m["odd_away"] < MAX_CRASH_ODD:
-            drop = (old_away - m["odd_away"]) / old_away
-            if drop >= CRASH_THRESHOLD_PERCENT / 100.0:
-                alerts.append({
-                    "fixture_id": fid,
-                    "home": m["home"],
-                    "away": m["away"],
-                    "league": m["league"],
-                    "side": "Away",
-                    "old_odd": old_away,
-                    "new_odd": m["odd_away"],
-                    "drop": round(drop * 100, 2),
-                    "predicted": m["away"],
-                    "time": now.strftime("%H:%M:%S")
-                })
     return alerts, new_state
 
 def save_bet(bets, alert):
@@ -280,7 +240,7 @@ if __name__ == "__main__":
         logging.info("Fuori dalla finestra di monitoraggio. Esco.")
         sys.exit(0)
 
-    logging.info("Market Hunter Calcio (Final) started")
+    logging.info("Market Hunter Calcio (Venerdì) started")
 
     state = load_json("state.json")
     bets = load_json("bets.json", [])
@@ -292,7 +252,7 @@ if __name__ == "__main__":
     alerts, new_state = check_crashes(state, matches, now)
 
     for alert in alerts:
-                if alert.get("alert_type") == "pre_alert":
+        if alert.get("alert_type") == "pre_alert":
             message = (
                 f"⚠️ *MOVIMENTO SOSPETTO*\n"
                 f"⚽ {alert['league']}\n"
