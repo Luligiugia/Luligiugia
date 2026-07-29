@@ -169,21 +169,75 @@ def check_crashes(state, current_matches, now):
         old_home = prev["odd_home"]
         old_away = prev["odd_away"]
 
+               # --- HOME ---
         if old_home > MIN_STARTING_ODD and m["odd_home"] < MAX_CRASH_ODD:
             drop = (old_home - m["odd_home"]) / old_home
-            if drop >= CRASH_THRESHOLD_PERCENT / 100.0:
-                alerts.append({
-                    "fixture_id": fid,
-                    "home": m["home"],
-                    "away": m["away"],
-                    "league": m["league"],
-                    "side": "Home",
-                    "old_odd": old_home,
-                    "new_odd": m["odd_home"],
-                    "drop": round(drop * 100, 2),
-                    "predicted": m["home"],
-                    "time": now.strftime("%H:%M:%S")
-                })
+            if drop >= PRE_CRASH_THRESHOLD_PERCENT / 100.0:
+                if drop >= FULL_CRASH_THRESHOLD_PERCENT / 100.0:
+                    # Alert definitivo solo se la quota è ancora > QUOTA_MINIMA_DOPO_CRASH
+                    if m["odd_home"] >= QUOTA_MINIMA_DOPO_CRASH:
+                        alerts.append({
+                            "fixture_id": fid,
+                            "home": m["home"],
+                            "away": m["away"],
+                            "league": m["league"],
+                            "side": "Home",
+                            "old_odd": old_home,
+                            "new_odd": m["odd_home"],
+                            "drop": round(drop * 100, 2),
+                            "predicted": m["home"],
+                            "time": now.strftime("%H:%M:%S"),
+                            "alert_type": "definitive"
+                        })
+                else:
+                    # Pre‑alert
+                    alerts.append({
+                        "fixture_id": fid,
+                        "home": m["home"],
+                        "away": m["away"],
+                        "league": m["league"],
+                        "side": "Home",
+                        "old_odd": old_home,
+                        "new_odd": m["odd_home"],
+                        "drop": round(drop * 100, 2),
+                        "predicted": m["home"],
+                        "time": now.strftime("%H:%M:%S"),
+                        "alert_type": "pre_alert"
+                    })
+
+        # --- AWAY ---
+        if old_away > MIN_STARTING_ODD and m["odd_away"] < MAX_CRASH_ODD:
+            drop = (old_away - m["odd_away"]) / old_away
+            if drop >= PRE_CRASH_THRESHOLD_PERCENT / 100.0:
+                if drop >= FULL_CRASH_THRESHOLD_PERCENT / 100.0:
+                    if m["odd_away"] >= QUOTA_MINIMA_DOPO_CRASH:
+                        alerts.append({
+                            "fixture_id": fid,
+                            "home": m["home"],
+                            "away": m["away"],
+                            "league": m["league"],
+                            "side": "Away",
+                            "old_odd": old_away,
+                            "new_odd": m["odd_away"],
+                            "drop": round(drop * 100, 2),
+                            "predicted": m["away"],
+                            "time": now.strftime("%H:%M:%S"),
+                            "alert_type": "definitive"
+                        })
+                else:
+                    alerts.append({
+                        "fixture_id": fid,
+                        "home": m["home"],
+                        "away": m["away"],
+                        "league": m["league"],
+                        "side": "Away",
+                        "old_odd": old_away,
+                        "new_odd": m["odd_away"],
+                        "drop": round(drop * 100, 2),
+                        "predicted": m["away"],
+                        "time": now.strftime("%H:%M:%S"),
+                        "alert_type": "pre_alert"
+                    })
 
         if old_away > MIN_STARTING_ODD and m["odd_away"] < MAX_CRASH_ODD:
             drop = (old_away - m["odd_away"]) / old_away
