@@ -1,0 +1,41 @@
+name: Market Hunter Calcio
+
+on:
+  repository_dispatch:
+    types: [scan]
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install requests
+      - name: Restore state cache
+        uses: actions/cache@v4
+        id: cache
+        with:
+          path: |
+            state.json
+            bets.json
+          key: market-hunter-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            market-hunter-${{ runner.os }}-
+      - name: Run scanner
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python market_hunter_calcio.py
+      - name: Save updated state cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: |
+            state.json
+            bets.json
+          key: ${{ steps.cache.outputs.cache-primary-key }}
