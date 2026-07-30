@@ -165,7 +165,8 @@ def check_crashes(state, current_matches, now):
                             "drop": round(drop * 100, 2),
                             "predicted": m["home"],
                             "time": now.strftime("%H:%M:%S"),
-                            "alert_type": "definitive"
+                            "alert_type": "definitive",
+                            "odd_draw": m.get("odd_draw")
                         })
                 else:
                     alerts.append({
@@ -179,7 +180,8 @@ def check_crashes(state, current_matches, now):
                         "drop": round(drop * 100, 2),
                         "predicted": m["home"],
                         "time": now.strftime("%H:%M:%S"),
-                        "alert_type": "pre_alert"
+                        "alert_type": "pre_alert",
+                        "odd_draw": m.get("odd_draw")
                     })
 
         # Lato Away
@@ -199,7 +201,8 @@ def check_crashes(state, current_matches, now):
                             "drop": round(drop * 100, 2),
                             "predicted": m["away"],
                             "time": now.strftime("%H:%M:%S"),
-                            "alert_type": "definitive"
+                            "alert_type": "definitive",
+                            "odd_draw": m.get("odd_draw")
                         })
                 else:
                     alerts.append({
@@ -213,7 +216,8 @@ def check_crashes(state, current_matches, now):
                         "drop": round(drop * 100, 2),
                         "predicted": m["away"],
                         "time": now.strftime("%H:%M:%S"),
-                        "alert_type": "pre_alert"
+                        "alert_type": "pre_alert",
+                        "odd_draw": m.get("odd_draw")
                     })
     return alerts, new_state
 
