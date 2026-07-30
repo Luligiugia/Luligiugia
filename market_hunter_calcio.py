@@ -263,6 +263,7 @@ if __name__ == "__main__":
                 f"⚽ {alert['league']}\n"
                 f"⚔️ {alert['home']} vs {alert['away']}\n"
                 f"📉 Quota {alert['predicted']}: {alert['old_odd']:.2f} → {alert['new_odd']:.2f} (-{alert['drop']}%)\n"
+                f"🤝 Quota pareggio: {alert.get('odd_draw', 'N/D')}\n"
                 f"⏱️ Rilevato alle {alert['time']}\n"
                 f"🔮 Possibile crollo in corso"
             )
@@ -272,6 +273,7 @@ if __name__ == "__main__":
                 f"⚽ {alert['league']}\n"
                 f"⚔️ {alert['home']} vs {alert['away']}\n"
                 f"📉 Quota {alert['predicted']}: {alert['old_odd']:.2f} → {alert['new_odd']:.2f} (-{alert['drop']}%)\n"
+                f"🤝 Quota pareggio: {alert.get('odd_draw', 'N/D')}\n"
                 f"⏱️ Rilevato alle {alert['time']}\n"
                 f"🔮 Pronostico: *{alert['predicted']}* vincitore"
             )
