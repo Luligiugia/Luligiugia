@@ -85,12 +85,13 @@ def fetch_odds():
                 continue
             bk = bookmakers[0]
 
-            odd_home = odd_away = None
+            odd_home = odd_away = odd_draw = None
             for market in bk.get("markets", []):
                 if market["key"] == "h2h":
                     outcomes = market["outcomes"]
                     odd_home = next((o["price"] for o in outcomes if o["name"] == home), None)
                     odd_away = next((o["price"] for o in outcomes if o["name"] == away), None)
+                    odd_draw = next((o["price"] for o in outcomes if o["name"] == "Draw"), None)
                     break
             if not odd_home or not odd_away:
                 continue
