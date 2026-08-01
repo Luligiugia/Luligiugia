@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Market Hunter Calcio – Venerdì Edition
+Market Hunter Calcio – Domenica Edition (con salvataggio CSV automatico)
 """
 
-import os, json, logging, requests, sys
+import os, json, csv, logging, requests, sys
 from datetime import datetime, date, timedelta
 
 API_KEY = os.environ["API_KEY"]
@@ -30,7 +30,7 @@ TARGET_SPORT_KEYS = [
 
 def is_monitoring_window():
     now = datetime.utcnow()
-    if now.weekday() != 6:
+    if now.weekday() != 6:   # domenica
         return False
     if not (14 <= now.hour <= 21):
         return False
@@ -104,6 +104,7 @@ def fetch_odds():
                 "commence_time": commence_time,
                 "odd_home": odd_home,
                 "odd_away": odd_away,
+                "odd_draw": odd_draw,
             })
         return matches
     except Exception as e:
@@ -125,19 +126,21 @@ def check_crashes(state, current_matches, now):
                 pass
 
         fid = m["fixture_id"]
+        prev = state.get(fid, {})
         new_state[fid] = {
             "home": m["home"],
             "away": m["away"],
             "league": m["league"],
             "odd_home": m["odd_home"],
             "odd_away": m["odd_away"],
-            "timestamp": now.isoformat()
+            "timestamp": now.isoformat(),
+            "pre_alert_sent": prev.get("pre_alert_sent", False),
+            "alert_sent": prev.get("alert_sent", False)
         }
 
         if fid not in state:
             continue
 
-        prev = state[fid]
         try:
             prev_time = datetime.fromisoformat(prev["timestamp"])
         except:
@@ -151,24 +154,24 @@ def check_crashes(state, current_matches, now):
         # Lato Home
         if old_home > MIN_STARTING_ODD and m["odd_home"] < MAX_CRASH_ODD:
             drop = (old_home - m["odd_home"]) / old_home
-            if drop >= PRE_CRASH_THRESHOLD_PERCENT / 100.0:
-                if drop >= FULL_CRASH_THRESHOLD_PERCENT / 100.0:
-                    if m["odd_home"] >= QUOTA_MINIMA_DOPO_CRASH:
-                        alerts.append({
-                            "fixture_id": fid,
-                            "home": m["home"],
-                            "away": m["away"],
-                            "league": m["league"],
-                            "side": "Home",
-                            "old_odd": old_home,
-                            "new_odd": m["odd_home"],
-                            "drop": round(drop * 100, 2),
-                            "predicted": m["home"],
-                            "time": now.strftime("%H:%M:%S"),
-                            "alert_type": "definitive",
-                            "odd_draw": m.get("odd_draw")
-                        })
-                else:
+            if drop >= FULL_CRASH_THRESHOLD_PERCENT / 100.0:
+                if m["odd_home"] >= QUOTA_MINIMA_DOPO_CRASH:
+                    alerts.append({
+                        "fixture_id": fid,
+                        "home": m["home"],
+                        "away": m["away"],
+                        "league": m["league"],
+                        "side": "Home",
+                        "old_odd": old_home,
+                        "new_odd": m["odd_home"],
+                        "drop": round(drop * 100, 2),
+                        "predicted": m["home"],
+                        "time": now.strftime("%H:%M:%S"),
+                        "alert_type": "definitive",
+                        "odd_draw": m.get("odd_draw")
+                    })
+            elif drop >= PRE_CRASH_THRESHOLD_PERCENT / 100.0:
+                if not prev.get("pre_alert_sent"):
                     alerts.append({
                         "fixture_id": fid,
                         "home": m["home"],
@@ -183,12 +186,29 @@ def check_crashes(state, current_matches, now):
                         "alert_type": "pre_alert",
                         "odd_draw": m.get("odd_draw")
                     })
+                    new_state[fid]["pre_alert_sent"] = True
 
         # Lato Away
         if old_away > MIN_STARTING_ODD and m["odd_away"] < MAX_CRASH_ODD:
             drop = (old_away - m["odd_away"]) / old_away
             if drop >= PRE_CRASH_THRESHOLD_PERCENT / 100.0:
-                if drop >= FULL_CRASH_THRESHOLD_PERCENT / 100.0:
+                if not prev.get("pre_alert_sent"):
+                    alerts.append({
+                        "fixture_id": fid,
+                        "home": m["home"],
+                        "away": m["away"],
+                        "league": m["league"],
+                        "side": "Away",
+                        "old_odd": old_away,
+                        "new_odd": m["odd_away"],
+                        "drop": round(drop * 100, 2),
+                        "predicted": m["away"],
+                        "time": now.strftime("%H:%M:%S"),
+                        "alert_type": "pre_alert",
+                        "odd_draw": m.get("odd_draw")
+                    })
+                    new_state[fid]["pre_alert_sent"] = True
+                if drop >= FULL_CRASH_THRESHOLD_PERCENT / 100.0 and prev.get("pre_alert_sent") and not prev.get("alert_sent"):
                     if m["odd_away"] >= QUOTA_MINIMA_DOPO_CRASH:
                         alerts.append({
                             "fixture_id": fid,
@@ -204,21 +224,8 @@ def check_crashes(state, current_matches, now):
                             "alert_type": "definitive",
                             "odd_draw": m.get("odd_draw")
                         })
-                else:
-                    alerts.append({
-                        "fixture_id": fid,
-                        "home": m["home"],
-                        "away": m["away"],
-                        "league": m["league"],
-                        "side": "Away",
-                        "old_odd": old_away,
-                        "new_odd": m["odd_away"],
-                        "drop": round(drop * 100, 2),
-                        "predicted": m["away"],
-                        "time": now.strftime("%H:%M:%S"),
-                        "alert_type": "pre_alert",
-                        "odd_draw": m.get("odd_draw")
-                    })
+                        new_state[fid]["alert_sent"] = True
+
     return alerts, new_state
 
 def save_bet(bets, alert):
@@ -238,6 +245,35 @@ def save_bet(bets, alert):
     })
     return bets
 
+def log_bet_to_csv(alert, filename="bets_log.csv"):
+    """Salva una riga nel file CSV per ogni alert."""
+    file_exists = os.path.isfile(filename)
+    with open(filename, "a", newline="") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow([
+                "fixture_id", "Data", "Ora", "Tipo", "Campionato",
+                "Squadra casa", "Squadra ospite", "Pronostico",
+                "Quota prima", "Quota dopo", "Calo %",
+                "Quota pareggio", "Risultato reale", "Esito"
+            ])
+        writer.writerow([
+            alert.get("fixture_id", ""),
+            datetime.now().strftime("%Y-%m-%d"),
+            alert["time"],
+            alert["alert_type"],
+            alert["league"],
+            alert["home"],
+            alert["away"],
+            alert["predicted"],
+            f'{alert["old_odd"]:.2f}',
+            f'{alert["new_odd"]:.2f}',
+            alert["drop"],
+            alert.get("odd_draw", "N/D"),
+            "",   # risultato reale
+            ""    # esito
+        ])
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 
@@ -245,7 +281,7 @@ if __name__ == "__main__":
         logging.info("Fuori dalla finestra di monitoraggio. Esco.")
         sys.exit(0)
 
-    logging.info("Market Hunter Calcio (Venerdì) started")
+    logging.info("Market Hunter Calcio (Domenica) started")
 
     state = load_json("state.json")
     bets = load_json("bets.json", [])
@@ -265,7 +301,7 @@ if __name__ == "__main__":
                 f"📉 Quota {alert['predicted']}: {alert['old_odd']:.2f} → {alert['new_odd']:.2f} (-{alert['drop']}%)\n"
                 f"🤝 Quota pareggio: {alert.get('odd_draw', 'N/D')}\n"
                 f"⏱️ Rilevato alle {alert['time']}\n"
-                f"🔮 Possibile crollo in corso"
+                f"🔮 Possibile crollo su *{alert['predicted']}*"
             )
         else:
             message = (
@@ -279,6 +315,7 @@ if __name__ == "__main__":
             )
         send_telegram(message)
         bets = save_bet(bets, alert)
+        log_bet_to_csv(alert)
 
     save_json("state.json", new_state)
     save_json("bets.json", bets)
