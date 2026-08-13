@@ -32,7 +32,7 @@ def is_monitoring_window():
     now = datetime.utcnow()
     if now.weekday() != 6:   # domenica
         return False
-    if not (12 <= now.hour <= 20):
+    if not (12 <= now.hour < 20):
         return False
     return True
 
