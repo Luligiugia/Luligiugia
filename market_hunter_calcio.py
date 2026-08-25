@@ -26,6 +26,40 @@ TARGET_SPORT_KEYS = [
     "soccer_poland_ekstraklasa",
     "soccer_russia_premier_league",
     "soccer_sweden_allsvenskan",
+    "soccer_norway_eliteserien",
+    "soccer_sweden_superettan",
+    "soccer_brazil_campeonato",
+    "soccer_japan_j_league",
+    "soccer_spain_segunda_division",
+    "soccer_germany_bundesliga_women",
+    "soccer_germany_dfb_pokal",
+    "soccer_saudi_arabia_pro_league",
+    "soccer_australia_aleague",
+    "soccer_usa_mls",
+    "soccer_uefa_european_championship",   # per i tornei estivi
+    "soccer_england_league_one",           # se supportate
+    "soccer_england_league_two",           # se supportate
+    "soccer_scotland_premiership",         # non minore ma può dare segnali
+    "soccer_netherlands_eredivisie",       # idem
+    "soccer_belgium_pro_league",           # idem
+    "soccer_turkey_super_league",          # idem
+    "soccer_greece_super_league",          # idem
+    "soccer_czech_first_league",           # idem
+    "soccer_romania_liga_1",               # idem
+    "soccer_bulgaria_first_league",        # idem
+    "soccer_hungary_nb_i",                 # idem
+    "soccer_croatia_hnl",                  # idem
+    "soccer_serbia_super_liga",            # idem
+    "soccer_slovenia_prva_liga",           # idem
+    "soccer_slovakia_super_liga",          # idem
+    "soccer_iceland_urvalsdeild",          # idem
+    "soccer_latvia_virsliga",              # idem
+    "soccer_lithuania_a_lyga",             # idem
+    "soccer_estonia_meistriliiga",         # idem
+    "soccer_cyprus_first_division",        # idem
+    "soccer_israel_premier_league",        # idem
+    "soccer_malta_premier_league",         # idem
+    "soccer_luxembourg_national_division", # idem
 ]
 
 def is_monitoring_window():
