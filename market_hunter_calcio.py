@@ -66,9 +66,13 @@ def is_monitoring_window():
 def send_telegram(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
-        requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "Markdown"}, timeout=10)
+        resp = requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": text}, timeout=10)
+        if resp.status_code != 200:
+            logging.error(f"TELEGRAM ERROR {resp.status_code}: {resp.text[:300]}")
+        else:
+            logging.info("Telegram OK: messaggio inviato")
     except Exception as e:
-        logging.error(f"Telegram error: {e}")
+        logging.error(f"TELEGRAM EXCEPTION: {e}")
 
 def load_json(filename, default=None):
     try:
