@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Market Hunter Calcio – Venerdì Edition (con salvataggio CSV, regola pareggio e filtro anti‑contraddittorio)
+Market Hunter Calcio – Venerdì Edition (con salvataggio CSV, filtro anti‑contraddittorio, no pareggi)
 """
 
 import os, json, csv, logging, requests, sys
@@ -15,49 +15,39 @@ FULL_CRASH_THRESHOLD_PERCENT = 25
 MAX_MINUTES_CRASH_WINDOW = 10
 MIN_STARTING_ODD = 1.80
 MAX_CRASH_ODD = 1.80
-QUOTA_MINIMA_DOPO_CRASH = 1.30
+# AGGIORNATO: alzata la quota minima per evitare scommesse poco redditizie
+QUOTA_MINIMA_DOPO_CRASH = 1.45 
 HOURS_BEFORE_KICKOFF = 2
-PAREGGIO_QUOTA_SOGLIA = 3.8   # nuova soglia per suggerire il pareggio
-AMBIGUOUS_MINUTES = 30         # finestra anti‑contraddittorio in minuti
+AMBIGUOUS_MINUTES = 30
 
+# AGGIORNATO: Liste ottimizzate per i campionati più affidabili
 TARGET_SPORT_KEYS = [
-    # Europa Settentrionale e Centrale
+    # Campionati con alta accuratezza (Europa del Nord & altro)
+    "soccer_sweden_allsvenskan",
+    "soccer_sweden_superettan",
+    "soccer_norway_eliteserien",
     "soccer_denmark_superliga",
     "soccer_finland_veikkausliiga",
-    "soccer_league_of_ireland",
-    "soccer_poland_ekstraklasa",
+    "soccer_saudi_arabia_pro_league",
+    "soccer_spain_segunda_division",
     "soccer_russia_premier_league",
-    "soccer_sweden_allsvenskan",
-    "soccer_norway_eliteserien",
-    "soccer_sweden_superettan",
-
-    # Europa Orientale e Balcani
-    "soccer_latvia_virsliga",
-    "soccer_lithuania_a_lyga",
-    "soccer_estonia_meistriliiga",
-    "soccer_iceland_urvalsdeild",
-    "soccer_cyprus_first_division",
-    "soccer_malta_premier_league",
-    "soccer_luxembourg_national_division",
-    "soccer_slovenia_prva_liga",
-    "soccer_slovakia_super_liga",
-    "soccer_hungary_nb_i",
-    "soccer_bulgaria_first_league",
-    "soccer_romania_liga_1",
-    "soccer_serbia_super_liga",
-    "soccer_croatia_hnl",
-
-    # Sud America e altre regioni a rischio
+    
+    # Sud America
     "soccer_argentina_primera_division",
     "soccer_brazil_campeonato",
-    "soccer_spain_segunda_division",   # seconda divisione spagnola, non la Liga
-    "soccer_germany_dfb_pokal",        # coppa nazionale tedesca (spesso partite minori)
-    "soccer_saudi_arabia_pro_league",  # lega con attenzione crescente
+    
+    # Altre coppe/minori
+    "soccer_league_of_ireland",
+    "soccer_germany_dfb_pokal",
+    
+    # NOTA: La Polonia (soccer_poland_ekstraklasa) è stata rimossa perché 
+    # generava molti falsi positivi (~55% di accuratezza). Puoi riaggiungerla se vuoi.
 ]
 
 def is_monitoring_window():
     now = datetime.utcnow()
-    if now.weekday() != 6:   # venerdì
+    # CAMBIA QUESTO NUMERO: 4=Venerdì, 5=Sabato, 6=Domenica
+    if now.weekday() != 6:   
         return False
     if not (12 <= now.hour < 20):
         return False
@@ -145,7 +135,6 @@ def fetch_odds():
 def check_crashes(state, current_matches, now):
     alerts = []
     new_state = {}
-    threshold_time = now - timedelta(minutes=MAX_MINUTES_CRASH_WINDOW)
 
     for m in current_matches:
         if m.get("commence_time"):
@@ -167,7 +156,6 @@ def check_crashes(state, current_matches, now):
             "timestamp": now.isoformat(),
             "pre_alert_sent": prev.get("pre_alert_sent", False),
             "alert_sent": prev.get("alert_sent", False),
-            # nuovi campi per filtro anti‑contraddittorio
             "last_side": prev.get("last_side"),
             "last_alert_time": prev.get("last_alert_time")
         }
@@ -185,7 +173,6 @@ def check_crashes(state, current_matches, now):
         old_home = prev["odd_home"]
         old_away = prev["odd_away"]
 
-        # Funzione per aggiungere un alert con marcatura di ambiguità
         def append_alert(side, odd_old, odd_new, drop, predicted, alert_type):
             ambiguous = False
             last_side = prev.get("last_side")
@@ -214,10 +201,8 @@ def check_crashes(state, current_matches, now):
                 "ambiguous": ambiguous
             }
             alerts.append(alert)
-            # aggiorna lo stato per il prossimo giro
             new_state[fid]["last_side"] = side
             new_state[fid]["last_alert_time"] = now.isoformat()
-            # Se è un alert pareggio? No, lo aggiungiamo dopo.
 
         # Lato Home
         if old_home > MIN_STARTING_ODD and m["odd_home"] < MAX_CRASH_ODD:
@@ -243,20 +228,7 @@ def check_crashes(state, current_matches, now):
                         append_alert("Away", old_away, m["odd_away"], drop, m["away"], "pre_alert")
                         new_state[fid]["pre_alert_sent"] = True
 
-    # Aggiunge eventuali segnalazioni pareggio per gli alert vittoria con quota pareggio >= soglia
-    final_alerts = []
-    for alert in alerts:
-        final_alerts.append(alert)
-        odd_draw = alert.get("odd_draw")
-        if odd_draw and isinstance(odd_draw, (int, float)) and odd_draw >= PAREGGIO_QUOTA_SOGLIA:
-            # Crea un alert pareggio separato
-            pareggio_alert = alert.copy()
-            pareggio_alert["alert_type"] = "pareggio"
-            pareggio_alert["predicted"] = "Pareggio"
-            pareggio_alert["side"] = "Draw"
-            final_alerts.append(pareggio_alert)
-
-    return final_alerts, new_state
+    return alerts, new_state
 
 def save_bet(bets, alert):
     fid = alert["fixture_id"]
@@ -264,17 +236,17 @@ def save_bet(bets, alert):
     for b in bets:
         if b["fixture_id"] == fid and b["side"] == side and b["predicted_winner"] == alert["predicted"]:
             return bets
+    
     bets.append({
         "fixture_id": fid,
         "home_team": alert["home"],
         "away_team": alert["away"],
         "predicted_winner": alert["predicted"],
-        "odd_at_crash": alert["new_odd"] if alert["alert_type"] != "pareggio" else alert.get("odd_draw"),
-        "crash_percent": alert["drop"] if alert["alert_type"] != "pareggio" else 0,
+        "odd_at_crash": alert["new_odd"],
+        "crash_percent": alert["drop"],
         "timestamp": datetime.now().isoformat(),
         "result": "pending",
         "tipo": alert["alert_type"],
-        "suggerimento_pareggio": "Sì" if alert["alert_type"] == "pareggio" else "No",
         "ambiguous": alert.get("ambiguous", False)
     })
     return bets
@@ -289,7 +261,7 @@ def log_bet_to_csv(alert, filename="bets_log.csv"):
                 "fixture_id", "Data", "Ora", "Tipo", "Campionato",
                 "Squadra casa", "Squadra ospite", "Pronostico",
                 "Quota prima", "Quota dopo", "Calo %",
-                "Quota pareggio", "Suggerimento pareggio", "Risultato reale", "Esito", "Ambiguità"
+                "Quota pareggio", "Risultato reale", "Esito", "Ambiguità"
             ])
         writer.writerow([
             alert.get("fixture_id", ""),
@@ -304,7 +276,6 @@ def log_bet_to_csv(alert, filename="bets_log.csv"):
             f'{alert["new_odd"]:.2f}',
             alert["drop"],
             alert.get("odd_draw", "N/D"),
-            "Sì" if alert["alert_type"] == "pareggio" else "No",
             "",   # risultato reale
             "",   # esito
             "Sì" if alert.get("ambiguous") else "No"
@@ -317,6 +288,7 @@ if __name__ == "__main__":
         logging.info("Fuori dalla finestra di monitoraggio. Esco.")
         sys.exit(0)
 
+    # CAMBIA IL NOME DEL GIORNO QUI SOTTO (Venerdì / Sabato / Domenica)
     logging.info("Market Hunter Calcio (Venerdì) started")
 
     state = load_json("state.json")
@@ -329,16 +301,7 @@ if __name__ == "__main__":
     alerts, new_state = check_crashes(state, matches, now)
 
     for alert in alerts:
-        if alert["alert_type"] == "pareggio":
-            message = (
-                f"🟡 *PAREGGIO SOSPETTO*\n"
-                f"⚽ {alert['league']}\n"
-                f"⚔️ {alert['home']} vs {alert['away']}\n"
-                f"🤝 Quota pareggio: {alert.get('odd_draw', 'N/D')}\n"
-                f"⏱️ Rilevato alle {alert['time']}\n"
-                f"🔮 Possibile pareggio da valutare"
-            )
-        elif alert.get("ambiguous"):
+        if alert.get("ambiguous"):
             message = (
                 f"⚠️ *SEGNALE CONTRADDITTORIO*\n"
                 f"⚽ {alert['league']}\n"
