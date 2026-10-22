@@ -2,7 +2,8 @@ name: Check Results Calcio
 
 on:
   schedule:
-    - cron: '0 21 * * 0'   # domenica alle 21:00 UTC
+    # Gira il lunedì mattina alle 06:00 UTC (08:00 italiane)
+    - cron: '0 6 * * 1'
   workflow_dispatch:
 
 jobs:
@@ -10,20 +11,44 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Restore bets.json from scanner cache
-        uses: actions/cache@v4
-        with:
-          path: bets.json
-          key: market-hunter-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: market-hunter-${{ runner.os }}-
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install dependencies
         run: pip install requests
+
+      - name: Restore bets and CSV from scanner cache
+        uses: actions/cache@v4
+        id: cache-restore
+        with:
+          path: |
+            bets.json
+            bets_log.csv
+          key: market-hunter-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            market-hunter-${{ runner.os }}-
+
       - name: Run results checker
         env:
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python results_checker.py
+
+      - name: Save updated bets and CSV to cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: |
+            bets.json
+            bets_log.csv
+          key: ${{ steps.cache-restore.outputs.cache-primary-key }}
+
+      - name: Upload CSV artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bets-log-aggiornato
+          path: bets_log.csv
