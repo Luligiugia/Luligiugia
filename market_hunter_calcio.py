@@ -15,14 +15,11 @@ FULL_CRASH_THRESHOLD_PERCENT = 25
 MAX_MINUTES_CRASH_WINDOW = 10
 MIN_STARTING_ODD = 1.80
 MAX_CRASH_ODD = 1.80
-# AGGIORNATO: alzata la quota minima per evitare scommesse poco redditizie
 QUOTA_MINIMA_DOPO_CRASH = 1.45 
 HOURS_BEFORE_KICKOFF = 2
 AMBIGUOUS_MINUTES = 30
 
-# AGGIORNATO: Liste ottimizzate per i campionati più affidabili
 TARGET_SPORT_KEYS = [
-    # Campionati con alta accuratezza (Europa del Nord & altro)
     "soccer_sweden_allsvenskan",
     "soccer_sweden_superettan",
     "soccer_norway_eliteserien",
@@ -31,23 +28,15 @@ TARGET_SPORT_KEYS = [
     "soccer_saudi_arabia_pro_league",
     "soccer_spain_segunda_division",
     "soccer_russia_premier_league",
-    
-    # Sud America
     "soccer_argentina_primera_division",
     "soccer_brazil_campeonato",
-    
-    # Altre coppe/minori
     "soccer_league_of_ireland",
     "soccer_germany_dfb_pokal",
-    
-    # NOTA: La Polonia (soccer_poland_ekstraklasa) è stata rimossa perché 
-    # generava molti falsi positivi (~55% di accuratezza). Puoi riaggiungerla se vuoi.
 ]
 
 def is_monitoring_window():
     now = datetime.utcnow()
-    # CAMBIA QUESTO NUMERO: 4=Venerdì, 5=Sabato, 6=Domenica
-    if now.weekday() != 6:   
+    if now.weekday() != 4:   # 4=Venerdì, 5=Sabato, 6=Domenica
         return False
     if not (12 <= now.hour < 20):
         return False
@@ -59,8 +48,6 @@ def send_telegram(text):
         resp = requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": text}, timeout=10)
         if resp.status_code != 200:
             logging.error(f"TELEGRAM ERROR {resp.status_code}: {resp.text[:300]}")
-        else:
-            logging.info("Telegram OK: messaggio inviato")
     except Exception as e:
         logging.error(f"TELEGRAM EXCEPTION: {e}")
 
@@ -88,6 +75,7 @@ def fetch_odds():
     }
     try:
         resp = requests.get(url, params=params, timeout=15)
+        resp.encoding = 'utf-8'  # FIX per i caratteri corrotti
         if resp.status_code != 200:
             logging.error(f"HTTP {resp.status_code}: {resp.text}")
             return []
@@ -153,6 +141,7 @@ def check_crashes(state, current_matches, now):
             "league": m["league"],
             "odd_home": m["odd_home"],
             "odd_away": m["odd_away"],
+            "commence_time": m["commence_time"],
             "timestamp": now.isoformat(),
             "pre_alert_sent": prev.get("pre_alert_sent", False),
             "alert_sent": prev.get("alert_sent", False),
@@ -196,6 +185,7 @@ def check_crashes(state, current_matches, now):
                 "drop": round(drop * 100, 2),
                 "predicted": predicted,
                 "time": now.strftime("%H:%M:%S"),
+                "commence_time": m.get("commence_time", ""),
                 "alert_type": alert_type,
                 "odd_draw": m.get("odd_draw"),
                 "ambiguous": ambiguous
@@ -252,16 +242,16 @@ def save_bet(bets, alert):
     return bets
 
 def log_bet_to_csv(alert, filename="bets_log.csv"):
-    """Salva una riga nel file CSV per ogni alert."""
     file_exists = os.path.isfile(filename)
-    with open(filename, "a", newline="") as f:
+    # Aggiunto encoding='utf-8' per evitare caratteri corrotti
+    with open(filename, "a", newline="", encoding='utf-8') as f:
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow([
                 "fixture_id", "Data", "Ora", "Tipo", "Campionato",
                 "Squadra casa", "Squadra ospite", "Pronostico",
                 "Quota prima", "Quota dopo", "Calo %",
-                "Quota pareggio", "Risultato reale", "Esito", "Ambiguità"
+                "Quota pareggio", "Data Match (UTC)", "Risultato reale", "Esito", "Ambiguità"
             ])
         writer.writerow([
             alert.get("fixture_id", ""),
@@ -276,6 +266,7 @@ def log_bet_to_csv(alert, filename="bets_log.csv"):
             f'{alert["new_odd"]:.2f}',
             alert["drop"],
             alert.get("odd_draw", "N/D"),
+            alert.get("commence_time", ""), # Data in cui si gioca la partita
             "",   # risultato reale
             "",   # esito
             "Sì" if alert.get("ambiguous") else "No"
@@ -288,7 +279,6 @@ if __name__ == "__main__":
         logging.info("Fuori dalla finestra di monitoraggio. Esco.")
         sys.exit(0)
 
-    # CAMBIA IL NOME DEL GIORNO QUI SOTTO (Venerdì / Sabato / Domenica)
     logging.info("Market Hunter Calcio (Venerdì) started")
 
     state = load_json("state.json")
@@ -307,7 +297,6 @@ if __name__ == "__main__":
                 f"⚽ {alert['league']}\n"
                 f"⚔️ {alert['home']} vs {alert['away']}\n"
                 f"📉 Quota {alert['predicted']}: {alert['old_odd']:.2f} → {alert['new_odd']:.2f} (-{alert['drop']}%)\n"
-                f"🤝 Quota pareggio: {alert.get('odd_draw', 'N/D')}\n"
                 f"⏱️ Rilevato alle {alert['time']}\n"
                 f"🔮 Valuta con cautela"
             )
@@ -317,7 +306,6 @@ if __name__ == "__main__":
                 f"⚽ {alert['league']}\n"
                 f"⚔️ {alert['home']} vs {alert['away']}\n"
                 f"📉 Quota {alert['predicted']}: {alert['old_odd']:.2f} → {alert['new_odd']:.2f} (-{alert['drop']}%)\n"
-                f"🤝 Quota pareggio: {alert.get('odd_draw', 'N/D')}\n"
                 f"⏱️ Rilevato alle {alert['time']}\n"
                 f"🔮 Possibile crollo su *{alert['predicted']}*"
             )
@@ -327,7 +315,6 @@ if __name__ == "__main__":
                 f"⚽ {alert['league']}\n"
                 f"⚔️ {alert['home']} vs {alert['away']}\n"
                 f"📉 Quota {alert['predicted']}: {alert['old_odd']:.2f} → {alert['new_odd']:.2f} (-{alert['drop']}%)\n"
-                f"🤝 Quota pareggio: {alert.get('odd_draw', 'N/D')}\n"
                 f"⏱️ Rilevato alle {alert['time']}\n"
                 f"🔮 Pronostico: *{alert['predicted']}* vincitore"
             )
@@ -337,12 +324,5 @@ if __name__ == "__main__":
 
     save_json("state.json", new_state)
     save_json("bets.json", bets)
-
-    solved = [b for b in bets if b["result"] != "pending"]
-    if solved:
-        won = sum(1 for b in solved if b["result"] == "won")
-        logging.info(f"RIEPILOGO: {won}/{len(solved)} vinti ({100*won/len(solved):.1f}%)")
-    else:
-        logging.info("Nessun bet risolto ancora.")
 
     logging.info(f"Inviate {len(alerts)} notifiche. Stato salvato.")
