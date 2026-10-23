@@ -6,6 +6,10 @@ on:
     - cron: '0 6 * * 1'
   workflow_dispatch:
 
+# QUI DEVI CAMBIARE IL GIORNO PER OGNI REPOSITORY (Venerdì, Sabato, Domenica)
+env:
+  GIORNO_REPO: "Domenica" 
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -46,9 +50,18 @@ jobs:
             bets_log.csv
           key: ${{ steps.cache-restore.outputs.cache-primary-key }}
 
+      # STEP AGGIUNTI PER GENERARE IL NOME CON DATA E GIORNO
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Rename CSV for download
+        if: always()
+        run: cp bets_log.csv "bets_log_${{ env.GIORNO_REPO }}_${{ steps.date.outputs.date }}.csv" || true
+
       - name: Upload CSV artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: bets-log-aggiornato
-          path: bets_log.csv
+          name: bets-log-${{ env.GIORNO_REPO }}-${{ steps.date.outputs.date }}
+          path: bets_log_${{ env.GIORNO_REPO }}_${{ steps.date.outputs.date }}.csv
