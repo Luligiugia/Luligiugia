@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  GIORNO_REPO: "Venerdì" # ⚠️ RICORDA DI CAMBIARE IN "Sabato" O "Domenica" NEGLI ALTRI REPOSITORY
+  GIORNO_REPO: "Domenica" # ⚠️ RICORDA DI CAMBIARE IN "Sabato" O "Domenica" NEGLI ALTRI REPOSITORY
 
 jobs:
   check:
