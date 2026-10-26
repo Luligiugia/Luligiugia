@@ -64,12 +64,12 @@ def update_csv(results):
     filename = "bets_log.csv"
     if not os.path.isfile(filename):
         logging.info("File CSV non trovato.")
-        return 0
+        return 0, 0, 0 # <-- CORRETTO QUI (restituisce una tupla invece di un singolo numero)
 
     with open(filename, "r", newline="", encoding='utf-8') as f:
         rows = list(csv.reader(f))
         
-    if not rows: return 0
+    if not rows: return 0, 0, 0
 
     header = rows[0]
     try:
@@ -80,7 +80,7 @@ def update_csv(results):
         idx_esito = header.index("Esito")
     except ValueError:
         logging.error("Colonne non trovate nel CSV.")
-        return 0
+        return 0, 0, 0
 
     updated_count = 0
     won = 0
@@ -92,7 +92,6 @@ def update_csv(results):
         
         # Se l'esito è già compilato, saltiamo (non sovrascriviamo)
         if row[idx_esito] != "":
-            # Contiamo comunque per il report finale
             if row[idx_esito] == "won": won += 1
             elif row[idx_esito] == "lost": lost += 1
             continue
@@ -106,9 +105,7 @@ def update_csv(results):
             info = results[key]
             row[idx_score] = info["score"]
             
-            # Logica dell'esito
             if info["winner"] == "DRAW":
-                # Se c'è pareggio, il pronostico "vincitore" è perso
                 row[idx_esito] = "lost"
                 lost += 1
             else:
