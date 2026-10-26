@@ -2,17 +2,17 @@ name: Check Results Calcio
 
 on:
   schedule:
-    # Gira il lunedì mattina alle 06:00 UTC (08:00 italiane)
-    - cron: '0 6 * * 1'
+    - cron: '0 6 * * 1' # Lunedì mattina alle 06:00 UTC
   workflow_dispatch:
 
-# QUI DEVI CAMBIARE IL GIORNO PER OGNI REPOSITORY (Venerdì, Sabato, Domenica)
 env:
-  GIORNO_REPO: "Domenica" 
+  GIORNO_REPO: "Venerdì" # ⚠️ RICORDA DI CAMBIARE IN "Sabato" O "Domenica" NEGLI ALTRI REPOSITORY
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -23,17 +23,6 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Restore bets and CSV from scanner cache
-        uses: actions/cache@v4
-        id: cache-restore
-        with:
-          path: |
-            bets.json
-            bets_log.csv
-          key: market-hunter-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: |
-            market-hunter-${{ runner.os }}-
-
       - name: Run results checker
         env:
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
@@ -41,24 +30,26 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python results_checker.py
 
-      - name: Save updated bets and CSV to cache
-        uses: actions/cache/save@v4
-        if: always()
-        with:
-          path: |
-            bets.json
-            bets_log.csv
-          key: ${{ steps.cache-restore.outputs.cache-primary-key }}
+      # Salva il CSV aggiornato nel repository
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add bets_log.csv || true
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update results [skip ci]"
+          git push
 
-      # STEP AGGIUNTI PER GENERARE IL NOME CON DATA E GIORNO
+      # Genera la data di oggi in formato YYYY-MM-DD
       - name: Get current date
         id: date
         run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
+      # Crea una copia del file con il nome specifico (es: bets_log_Venerdì_2026-10-26.csv)
       - name: Rename CSV for download
         if: always()
         run: cp bets_log.csv "bets_log_${{ env.GIORNO_REPO }}_${{ steps.date.outputs.date }}.csv" || true
 
+      # Carica l'artefatto scaricabile
       - name: Upload CSV artifact
         uses: actions/upload-artifact@v4
         if: always()
