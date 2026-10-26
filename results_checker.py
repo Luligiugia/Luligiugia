@@ -35,9 +35,19 @@ def get_results_last_days():
         target_date = (date.today() - timedelta(days=delta)).strftime("%Y-%m-%d")
         try:
             resp = requests.get(url, headers=headers, params={"date": target_date}, timeout=15)
+            
+            # NUOVO: Logga l'errore HTTP se la richiesta fallisce
             if resp.status_code != 200:
+                logging.error(f"HTTP Error {resp.status_code} per {target_date}: {resp.text}")
                 continue
+                
             data = resp.json()
+            
+            # NUOVO: Logga eventuali errori restituiti nel JSON (es. chiave errata, limiti)
+            if data.get("errors"):
+                logging.error(f"API-Football Error per {target_date}: {data['errors']}")
+                continue
+                
             for match in data.get("response", []):
                 goals = match["goals"]
                 if goals["home"] is None or goals["away"] is None:
@@ -64,7 +74,7 @@ def update_csv(results):
     filename = "bets_log.csv"
     if not os.path.isfile(filename):
         logging.info("File CSV non trovato.")
-        return 0, 0, 0 # <-- CORRETTO QUI (restituisce una tupla invece di un singolo numero)
+        return 0, 0, 0
 
     with open(filename, "r", newline="", encoding='utf-8') as f:
         rows = list(csv.reader(f))
