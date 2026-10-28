@@ -20,6 +20,7 @@ HOURS_BEFORE_KICKOFF = 2
 AMBIGUOUS_MINUTES = 30
 
 TARGET_SPORT_KEYS = [
+    # Leghe storiche (con buona accuratezza)
     "soccer_sweden_allsvenskan",
     "soccer_sweden_superettan",
     "soccer_norway_eliteserien",
@@ -32,6 +33,23 @@ TARGET_SPORT_KEYS = [
     "soccer_brazil_campeonato",
     "soccer_league_of_ireland",
     "soccer_germany_dfb_pokal",
+
+    # Nuove leghe candidate
+    "soccer_italy_serie_c",
+    "soccer_italy_serie_d",
+    "soccer_italy_primavera_1",
+    "soccer_germany_2_bundesliga",
+    "soccer_germany_regionalliga",
+    "soccer_france_ligue_2",
+    "soccer_france_national",
+    "soccer_england_national_league",
+    "soccer_spain_segunda_division_b",
+    "soccer_portugal_segunda_liga",
+    "soccer_turkey_1_lig",
+    "soccer_greece_super_league_2",
+    "soccer_argentina_primera_nacional",
+    "soccer_brazil_serie_b",
+    "soccer_chile_primera_b",
 ]
 
 def is_monitoring_window():
