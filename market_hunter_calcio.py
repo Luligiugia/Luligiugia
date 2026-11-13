@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Market Hunter Calcio – Venerdì Edition (con salvataggio CSV, filtro anti‑contraddittorio, no pareggi)
+Market Hunter Calcio – Venerdì Edition (Fix Timezone)
 """
 
 import os, json, csv, logging, requests, sys
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 
 API_KEY = os.environ["API_KEY"]
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
@@ -20,7 +20,7 @@ HOURS_BEFORE_KICKOFF = 2
 AMBIGUOUS_MINUTES = 30
 
 TARGET_SPORT_KEYS = [
-    # Leghe storiche (con buona accuratezza)
+    # Leghe storiche
     "soccer_sweden_allsvenskan",
     "soccer_sweden_superettan",
     "soccer_norway_eliteserien",
@@ -33,7 +33,6 @@ TARGET_SPORT_KEYS = [
     "soccer_brazil_campeonato",
     "soccer_league_of_ireland",
     "soccer_germany_dfb_pokal",
-
     # Nuove leghe candidate
     "soccer_italy_serie_c",
     "soccer_italy_serie_d",
@@ -53,8 +52,8 @@ TARGET_SPORT_KEYS = [
 ]
 
 def is_monitoring_window():
-    now = datetime.utcnow()
-    if now.weekday() != 4:   # 4=Venerdì, 5=Sabato, 6=Domenica
+    now = datetime.now(timezone.utc)
+    if now.weekday() != 6:   # 4=Venerdì, 5=Sabato, 6=Domenica
         return False
     if not (12 <= now.hour < 20):
         return False
@@ -93,7 +92,7 @@ def fetch_odds():
     }
     try:
         resp = requests.get(url, params=params, timeout=15)
-        resp.encoding = 'utf-8'  # FIX per i caratteri corrotti
+        resp.encoding = 'utf-8'
         if resp.status_code != 200:
             logging.error(f"HTTP {resp.status_code}: {resp.text}")
             return []
@@ -145,10 +144,13 @@ def check_crashes(state, current_matches, now):
     for m in current_matches:
         if m.get("commence_time"):
             try:
+                # kickoff è timezone-aware (UTC)
                 kickoff = datetime.fromisoformat(m["commence_time"].replace("Z", "+00:00"))
+                # Anche now è timezone-aware (UTC), quindi la sottrazione funziona
                 if (kickoff - now).total_seconds() > HOURS_BEFORE_KICKOFF * 3600:
                     continue
-            except:
+            except Exception as e:
+                logging.error(f"Errore calcolo orario per {m['home']} vs {m['away']}: {e}")
                 pass
 
         fid = m["fixture_id"]
@@ -252,7 +254,7 @@ def save_bet(bets, alert):
         "predicted_winner": alert["predicted"],
         "odd_at_crash": alert["new_odd"],
         "crash_percent": alert["drop"],
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "result": "pending",
         "tipo": alert["alert_type"],
         "ambiguous": alert.get("ambiguous", False)
@@ -261,7 +263,6 @@ def save_bet(bets, alert):
 
 def log_bet_to_csv(alert, filename="bets_log.csv"):
     file_exists = os.path.isfile(filename)
-    # Aggiunto encoding='utf-8' per evitare caratteri corrotti
     with open(filename, "a", newline="", encoding='utf-8') as f:
         writer = csv.writer(f)
         if not file_exists:
@@ -273,7 +274,7 @@ def log_bet_to_csv(alert, filename="bets_log.csv"):
             ])
         writer.writerow([
             alert.get("fixture_id", ""),
-            datetime.now().strftime("%Y-%m-%d"),
+            datetime.now(timezone.utc).strftime("%Y-%m-%d"),
             alert["time"],
             alert["alert_type"],
             alert["league"],
@@ -284,9 +285,9 @@ def log_bet_to_csv(alert, filename="bets_log.csv"):
             f'{alert["new_odd"]:.2f}',
             alert["drop"],
             alert.get("odd_draw", "N/D"),
-            alert.get("commence_time", ""), # Data in cui si gioca la partita
-            "",   # risultato reale
-            "",   # esito
+            alert.get("commence_time", ""),
+            "",
+            "",
             "Sì" if alert.get("ambiguous") else "No"
         ])
 
@@ -305,7 +306,8 @@ if __name__ == "__main__":
     matches = fetch_odds()
     logging.info(f"Trovate {len(matches)} partite nei campionati target")
 
-    now = datetime.now()
+    # FIX: now è timezone-aware (UTC) per combaciare con kickoff
+    now = datetime.now(timezone.utc)
     alerts, new_state = check_crashes(state, matches, now)
 
     for alert in alerts:
