@@ -1,15 +1,1 @@
-{
-  "976d20d0bdfd5ebae5800d5ec4f8dedf": {
-    "home": "CD Eldense",
-    "away": "Sabadell FC",
-    "league": "La Liga 2 - Spain - soccer_spain_segunda_division",
-    "odd_home": 1.0,
-    "odd_away": 26.0,
-    "commence_time": "2026-11-15T17:30:00Z",
-    "timestamp": "2026-11-15T19:40:44.252885+00:00",
-    "pre_alert_sent": false,
-    "alert_sent": false,
-    "last_side": null,
-    "last_alert_time": null
-  }
-}
+{}
