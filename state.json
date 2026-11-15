@@ -1,17 +1,4 @@
 {
-  "f241b0cec31506c2eb749ff9be97667c": {
-    "home": "Tenerife",
-    "away": "AD Ceuta FC",
-    "league": "La Liga 2 - Spain - soccer_spain_segunda_division",
-    "odd_home": 1.0,
-    "odd_away": 100.0,
-    "commence_time": "2026-11-15T13:03:00Z",
-    "timestamp": "2026-11-15T15:10:41.275595+00:00",
-    "pre_alert_sent": false,
-    "alert_sent": false,
-    "last_side": null,
-    "last_alert_time": null
-  },
   "b8308c8150f5ad55e242d7671adaffbd": {
     "home": "Granada CF",
     "away": "Las Palmas",
@@ -19,7 +6,7 @@
     "odd_home": 1.81,
     "odd_away": 3.35,
     "commence_time": "2026-11-15T15:15:00Z",
-    "timestamp": "2026-11-15T15:10:41.275595+00:00",
+    "timestamp": "2026-11-15T15:15:41.114941+00:00",
     "pre_alert_sent": false,
     "alert_sent": false,
     "last_side": null,
