@@ -1,17 +1,4 @@
 {
-  "b8308c8150f5ad55e242d7671adaffbd": {
-    "home": "Granada CF",
-    "away": "Las Palmas",
-    "league": "La Liga 2 - Spain - soccer_spain_segunda_division",
-    "odd_home": 1.01,
-    "odd_away": 100.0,
-    "commence_time": "2026-11-15T15:15:00Z",
-    "timestamp": "2026-11-15T17:20:43.783862+00:00",
-    "pre_alert_sent": false,
-    "alert_sent": false,
-    "last_side": null,
-    "last_alert_time": null
-  },
   "976d20d0bdfd5ebae5800d5ec4f8dedf": {
     "home": "CD Eldense",
     "away": "Sabadell FC",
@@ -19,7 +6,7 @@
     "odd_home": 2.38,
     "odd_away": 3.15,
     "commence_time": "2026-11-15T17:30:00Z",
-    "timestamp": "2026-11-15T17:20:43.783862+00:00",
+    "timestamp": "2026-11-15T17:25:33.630004+00:00",
     "pre_alert_sent": false,
     "alert_sent": false,
     "last_side": null,
@@ -32,7 +19,7 @@
     "odd_home": 1.57,
     "odd_away": 5.4,
     "commence_time": "2026-11-15T17:30:00Z",
-    "timestamp": "2026-11-15T17:20:43.783862+00:00",
+    "timestamp": "2026-11-15T17:25:33.630004+00:00",
     "pre_alert_sent": false,
     "alert_sent": false,
     "last_side": null,
