@@ -1,17 +1,4 @@
 {
-  "dc45cf14f57c3eadd2a68990b7c616cd": {
-    "home": "Dinamo Moscow",
-    "away": "FC Krasnodar",
-    "league": "Premier League - Russia - soccer_russia_premier_league",
-    "odd_home": 2.22,
-    "odd_away": 3.79,
-    "commence_time": "2026-11-22T11:00:00Z",
-    "timestamp": "2026-11-22T12:01:11.621798+00:00",
-    "pre_alert_sent": false,
-    "alert_sent": false,
-    "last_side": null,
-    "last_alert_time": null
-  },
   "3c28dfa82e4844db7223a56d511520f2": {
     "home": "AC Horsens",
     "away": "Silkeborg IF",
@@ -19,7 +6,7 @@
     "odd_home": 2.38,
     "odd_away": 2.97,
     "commence_time": "2026-11-22T13:00:00Z",
-    "timestamp": "2026-11-22T12:01:11.621798+00:00",
+    "timestamp": "2026-11-22T12:05:37.253888+00:00",
     "pre_alert_sent": false,
     "alert_sent": false,
     "last_side": null,
@@ -32,7 +19,7 @@
     "odd_home": 1.74,
     "odd_away": 4.04,
     "commence_time": "2026-11-22T13:00:00Z",
-    "timestamp": "2026-11-22T12:01:11.621798+00:00",
+    "timestamp": "2026-11-22T12:05:37.253888+00:00",
     "pre_alert_sent": false,
     "alert_sent": false,
     "last_side": null,
